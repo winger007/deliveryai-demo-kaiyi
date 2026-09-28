@@ -13,6 +13,7 @@ export const initialState: AppState = {
   services: [],
   paid: false,
   lastMessage: i18next.t('message.welcome'),
+  chatSession: null,
 }
 
 const stageMessages: Record<string, string> = {
@@ -23,6 +24,10 @@ const stageMessages: Record<string, string> = {
 }
 
 const localeForLanguage = (lang: string) => (lang === 'en' ? 'en-US' : 'zh-CN')
+
+function nowTime(): string {
+  return new Date().toLocaleTimeString(localeForLanguage(i18next.language), { hour: '2-digit', minute: '2-digit' })
+}
 
 export function orderReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
@@ -74,7 +79,7 @@ export function orderReducer(state: AppState, action: AppAction): AppState {
       const serviceName = i18next.t(`${action.service}.name`)
       return {
         ...state,
-        services: [...state.services, { id: uid(), type: serviceName, createdAt: new Date().toLocaleTimeString(localeForLanguage(i18next.language), { hour: '2-digit', minute: '2-digit' }), status: 'waiting' }],
+        services: [...state.services, { id: uid(), type: serviceName, createdAt: nowTime(), status: 'waiting' }],
         lastMessage: i18next.t('message.service_called', { service: serviceName }),
       }
     }
@@ -92,6 +97,90 @@ export function orderReducer(state: AppState, action: AppAction): AppState {
       return { ...initialState, lastMessage: i18next.t('message.reset') }
     case 'SET_MESSAGE':
       return { ...state, lastMessage: action.message }
+    case 'CREATE_CHAT_SESSION': {
+      const hostId = uid()
+      return {
+        ...state,
+        chatSession: {
+          id: uid(),
+          name: action.sessionName,
+          hostId,
+          hostName: action.hostName,
+          participants: [{ id: hostId, name: action.hostName, isHost: true }],
+          messages: [],
+          active: true,
+        },
+        lastMessage: i18next.t('chat.session_created'),
+      }
+    }
+    case 'JOIN_CHAT_SESSION': {
+      if (!state.chatSession) return state
+      const participant = { id: action.participant.id, name: action.participant.name, isHost: false }
+      const systemMessage = {
+        id: uid(),
+        senderId: action.participant.id,
+        senderName: action.participant.name,
+        content: i18next.t('chat.joined', { name: action.participant.name }),
+        timestamp: nowTime(),
+        type: 'system' as const,
+      }
+      return {
+        ...state,
+        chatSession: {
+          ...state.chatSession,
+          participants: [...state.chatSession.participants, participant],
+          messages: [...state.chatSession.messages, systemMessage],
+        },
+        lastMessage: i18next.t('chat.joined', { name: action.participant.name }),
+      }
+    }
+    case 'SEND_CHAT_MESSAGE': {
+      if (!state.chatSession) return state
+      if (!action.content.trim()) return state
+      const message = {
+        id: uid(),
+        senderId: action.senderId,
+        senderName: action.senderName,
+        content: action.content.trim().slice(0, 200),
+        timestamp: nowTime(),
+        type: 'text' as const,
+        handled: false,
+      }
+      return {
+        ...state,
+        chatSession: {
+          ...state.chatSession,
+          messages: [...state.chatSession.messages, message],
+        },
+      }
+    }
+    case 'HANDLE_CHAT_REQUEST': {
+      if (!state.chatSession) return state
+      const message = state.chatSession.messages.find((m) => m.id === action.messageId)
+      if (!message || message.handled) return state
+      // 将消息内容作为菜品名称加入购物车
+      const cartItem = {
+        uid: uid(),
+        productId: `chat-${message.id}`,
+        name: message.content,
+        price: 0,
+        quantity: 1,
+        image: '',
+        spec: '',
+        orderedBy: message.senderName,
+      }
+      return {
+        ...state,
+        cart: [...state.cart, cartItem],
+        chatSession: {
+          ...state.chatSession,
+          messages: state.chatSession.messages.map((m) => m.id === action.messageId ? { ...m, handled: true } : m),
+        },
+        lastMessage: i18next.t('chat.order_added', { dish: message.content }),
+      }
+    }
+    case 'CLOSE_CHAT_SESSION':
+      return { ...state, chatSession: null }
     default:
       return state
   }

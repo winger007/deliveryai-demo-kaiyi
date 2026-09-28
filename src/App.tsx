@@ -2,11 +2,12 @@ import { useCallback, useEffect, useReducer, useState } from 'react'
 import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { ClipboardList, ConciergeBell, LayoutDashboard, Menu as MenuIcon, ShoppingBasket } from 'lucide-react'
+import { CheckoutView } from '@/components/CheckoutView'
+import { DemoConsole } from '@/components/DemoConsole'
+import { GroupChatPanel } from '@/components/GroupChatPanel'
 import { HomeView } from '@/components/HomeView'
 import { WelcomeView } from '@/components/WelcomeView'
 import { CartPanel } from '@/components/CartPanel'
-import { CheckoutView } from '@/components/CheckoutView'
-import { DemoConsole } from '@/components/DemoConsole'
 import { MenuView } from '@/components/MenuView'
 import { OrderView } from '@/components/OrderView'
 import { ServiceSheet } from '@/components/ServiceSheet'
@@ -17,8 +18,25 @@ import { useElderlyMode } from '@/hooks/useElderlyMode'
 import { initialViewFromHash, useViewRoute } from '@/hooks/useViewRoute'
 import { orderReducer, initialState } from '@/state/orderReducer'
 import { products } from '@/data/menu'
-import { money } from '@/lib/utils'
+import { uid, money } from '@/lib/utils'
 import type { AppState, ViewName } from '@/types'
+
+const HOST_NAME = '姚乾'
+const SIM_PARTICIPANT_NAMES = ['林溪', '陈默', '周逸', '苏然']
+const SIM_MESSAGE_TEMPLATES_ZH = [
+  '帮我点一份麻辣牛肉',
+  '想要一份鲜虾滑',
+  '加一份手工宽粉',
+  '帮我点一份脆嫩毛肚',
+  '想喝柠檬青桔饮',
+]
+const SIM_MESSAGE_TEMPLATES_EN = [
+  'Please order me some spicy beef',
+  'I want a portion of shrimp paste',
+  'Add some handmade wide noodles',
+  'Get me some beef tripe',
+  'I want a lemon calamansi drink',
+]
 
 function createInitialState(): AppState {
   const search = new URLSearchParams(window.location.search)
@@ -32,7 +50,7 @@ function createInitialState(): AppState {
       ...initialState,
       table: 'A08',
       view: 'menu',
-      cart: [{ uid: 'preview-item', productId: product.id, name: i18next.t(product.name), price: product.price, quantity: 1, image: product.image, spec, orderedBy: '姚乾' }],
+      cart: [{ uid: 'preview-item', productId: product.id, name: i18next.t(product.name), price: product.price, quantity: 1, image: product.image, spec, orderedBy: HOST_NAME }],
       lastMessage: initialState.lastMessage,
     }
   }
@@ -53,6 +71,8 @@ export default function App() {
   const [serviceOpen, setServiceOpen] = useState(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [simJoinIndex, setSimJoinIndex] = useState(0)
   const cartTotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const waitingServices = state.services.filter((service) => service.status === 'waiting').length
 
@@ -86,8 +106,61 @@ export default function App() {
     dispatch({ type: 'SET_MESSAGE', message: elderly ? '已切换为常规模式' : '已切换为老人模式' })
   }
 
+  // 聊天会话回调
+  const handleCreateSession = (sessionName: string) => {
+    dispatch({ type: 'CREATE_CHAT_SESSION', sessionName, hostName: HOST_NAME })
+  }
+  const handleEnterOrdering = () => {
+    // 绑定桌台后进入菜单页，不中断聊天会话状态
+    if (!state.table) {
+      dispatch({ type: 'BIND_TABLE', table: 'A08' })
+    }
+    dispatch({ type: 'SET_VIEW', view: 'menu' })
+    setChatOpen(false)
+  }
+  const handleSendMessage = (content: string) => {
+    if (!state.chatSession) return
+    const host = state.chatSession.participants.find((p) => p.isHost)
+    if (!host) return
+    dispatch({ type: 'SEND_CHAT_MESSAGE', senderId: host.id, senderName: host.name, content })
+  }
+  const handleSimulateJoin = () => {
+    if (!state.chatSession) return
+    const name = SIM_PARTICIPANT_NAMES[simJoinIndex % SIM_PARTICIPANT_NAMES.length]
+    dispatch({ type: 'JOIN_CHAT_SESSION', participant: { id: uid(), name } })
+    setSimJoinIndex((i) => i + 1)
+  }
+  const handleSimulateMessage = () => {
+    if (!state.chatSession) return
+    // 找一个非 host 的参与者发消息
+    const nonHosts = state.chatSession.participants.filter((p) => !p.isHost)
+    if (nonHosts.length === 0) return
+    const sender = nonHosts[nonHosts.length - 1] // 最近加入的参与者
+    const templates = i18n.language === 'zh' ? SIM_MESSAGE_TEMPLATES_ZH : SIM_MESSAGE_TEMPLATES_EN
+    const content = templates[Math.floor(Math.random() * templates.length)]
+    dispatch({ type: 'SEND_CHAT_MESSAGE', senderId: sender.id, senderName: sender.name, content })
+  }
+
+  // 聊天面板共享渲染（HomeView 和主布局都能打开）
+  const chatPanel = (
+    <GroupChatPanel
+      open={chatOpen}
+      session={state.chatSession}
+      onOpenChange={setChatOpen}
+      onCreateSession={handleCreateSession}
+      onEnterOrdering={handleEnterOrdering}
+      onHandleRequest={(messageId) => dispatch({ type: 'HANDLE_CHAT_REQUEST', messageId })}
+      onSendMessage={handleSendMessage}
+    />
+  )
+
   if (state.view === 'home' || !state.table) {
-    return <HomeView onBind={(table) => dispatch({ type: 'BIND_TABLE', table })} />
+    return (
+      <>
+        <HomeView onBind={(table) => dispatch({ type: 'BIND_TABLE', table })} onOpenChat={() => setChatOpen(true)} />
+        {chatPanel}
+      </>
+    )
   }
 
   if (state.view === 'welcome') {
@@ -107,6 +180,7 @@ export default function App() {
         onView={changeView}
         onService={() => setServiceOpen(true)}
         onConsole={() => setConsoleOpen(true)}
+        onChat={() => setChatOpen(true)}
       />
 
       {state.view === 'menu' && (
@@ -147,12 +221,16 @@ export default function App() {
         stage={state.orderStage}
         soldOut={state.soldOut}
         services={state.services}
+        chatSession={state.chatSession}
         onOpenChange={setConsoleOpen}
         onStage={(stage) => dispatch({ type: 'SET_STAGE', stage })}
         onSoldOut={(productId) => dispatch({ type: 'TOGGLE_SOLD_OUT', productId })}
         onRespond={() => dispatch({ type: 'RESPOND_SERVICES' })}
         onReset={() => { dispatch({ type: 'RESET' }); setConsoleOpen(false) }}
+        onSimulateJoin={handleSimulateJoin}
+        onSimulateMessage={handleSimulateMessage}
       />
+      {chatPanel}
 
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>
         <DialogContent title={t('cart.dialog_title')}>

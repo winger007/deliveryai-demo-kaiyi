@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, ChefHat, RotateCcw, Store, ToggleLeft, UtensilsCrossed, XCircle } from 'lucide-react'
+import { CheckCircle2, ChefHat, MessageSquarePlus, RotateCcw, Store, ToggleLeft, UserPlus, UtensilsCrossed, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { products, tableAreas } from '@/data/menu'
-import type { OrderStage, ServiceRequest } from '@/types'
+import type { ChatSession, OrderStage, ServiceRequest } from '@/types'
 
 const stageIcons: Record<OrderStage, typeof ChefHat> = {
   submitted: Store,
@@ -19,18 +19,22 @@ interface DemoConsoleProps {
   stage: OrderStage
   soldOut: string[]
   services: ServiceRequest[]
+  chatSession: ChatSession | null
   onOpenChange: (open: boolean) => void
   onStage: (stage: OrderStage) => void
   onSoldOut: (id: string) => void
   onRespond: () => void
   onReset: () => void
+  onSimulateJoin: () => void
+  onSimulateMessage: () => void
 }
 
-export function DemoConsole({ open, table, stage, soldOut, services, onOpenChange, onStage, onSoldOut, onRespond, onReset }: DemoConsoleProps) {
+export function DemoConsole({ open, table, stage, soldOut, services, chatSession, onOpenChange, onStage, onSoldOut, onRespond, onReset, onSimulateJoin, onSimulateMessage }: DemoConsoleProps) {
   const { t } = useTranslation()
   const waiting = services.filter((service) => service.status === 'waiting').length
   const areaKey = tableAreas[table]
   const tableLabel = areaKey ? `${table} · ${t(areaKey)}` : table
+  const hasChat = !!chatSession
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title={t('console.title')} className="md:max-w-2xl">
@@ -46,6 +50,25 @@ export function DemoConsole({ open, table, stage, soldOut, services, onOpenChang
             <Button onClick={onRespond} disabled={!waiting} variant="secondary" className="mt-3 w-full"><CheckCircle2 size={17} />{t('console.respond_btn')}</Button>
           </section>
         </div>
+
+        {/* 聊天点菜模拟 */}
+        <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-charcoal-900">{t('console.chat_simulation')}</h3>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${hasChat ? 'bg-emerald-50 text-emerald-600' : 'bg-rice-100 text-charcoal-500'}`}>
+              {hasChat ? `✓ ${chatSession!.participants.length} ${t('chat.participants')}` : t('console.no_session')}
+            </span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Button onClick={onSimulateJoin} disabled={!hasChat} variant="outline" className="w-full">
+              <UserPlus size={16} />{t('console.simulate_join')}
+            </Button>
+            <Button onClick={onSimulateMessage} disabled={!hasChat} variant="outline" className="w-full">
+              <MessageSquarePlus size={16} />{t('console.simulate_message')}
+            </Button>
+          </div>
+        </section>
+
         <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between"><h3 className="font-bold text-charcoal-900">{t('console.soldout_title')}</h3><span className="flex items-center gap-1 text-xs text-charcoal-500"><ToggleLeft size={16} />{t('console.soldout_hint')}</span></div>
           <div className="scrollbar-none mt-4 flex gap-2 overflow-x-auto pb-1">{products.map((product) => { const unavailable = soldOut.includes(product.id); return <button key={product.id} onClick={() => onSoldOut(product.id)} className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${unavailable ? 'border-chili-500/30 bg-chili-50 text-chili-600' : 'border-charcoal-900/5 bg-rice-50 text-charcoal-500'}`}>{unavailable ? <XCircle size={15} /> : <CheckCircle2 size={15} />}{t(product.name)}</button> })}</div>

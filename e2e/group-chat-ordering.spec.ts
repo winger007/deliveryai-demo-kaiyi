@@ -155,49 +155,40 @@ test.describe('多人聊天点菜 - E2E 验收测试', () => {
     await page.keyboard.press('Escape')
     await openDemoConsole(page)
     await page.getByRole('button', { name: /模拟参与者加入/ }).click()
-    await page.getByRole('button', { name: /模拟参与者发消息/ }).click()
     await page.keyboard.press('Escape')
-    await openChatFromMenu(page)
-    // 记录消息内容
-    const messageLocator = page.locator('p.text-sm.leading-5')
-    const messageTexts = await messageLocator.allTextContents()
-    const knownMessages = [
-      '帮我点一份麻辣牛肉',
-      '想要一份鲜虾滑',
-      '加一份手工宽粉',
-      '帮我点一份脆嫩毛肚',
-      '想喝柠檬青桔饮',
-    ]
-    const sentMessage = messageTexts.find((t) => knownMessages.includes(t))
-    expect(sentMessage).toBeTruthy()
-    // 点击代为点菜
-    await page.getByRole('button', { name: /代为点菜/ }).first().click()
-    // 关闭聊天面板
+
+    // DemoConsole 随机发送 5 条模板之一；其中「帮我点一份麻辣牛肉」不含任何菜品名
+    // （菜品为「琥珀嫩牛肉」而非「麻辣牛肉」），按 Spec 匹配规则为不匹配，不加入购物车。
+    // 其余 4 条各含一个真实菜品名。反复发送直到出现一条可匹配的参与者消息。
+    const messageToDish: Record<string, string> = {
+      '想要一份鲜虾滑': '鲜虾滑',
+      '加一份手工宽粉': '手工宽粉',
+      '帮我点一份脆嫩毛肚': '脆嫩毛肚',
+      '想喝柠檬青桔饮': '柠檬青桔饮',
+    }
+    const matchingMessages = Object.keys(messageToDish)
+    let targetMessage: string | undefined
+    for (let attempt = 0; attempt < 8 && !targetMessage; attempt++) {
+      await openDemoConsole(page)
+      await page.getByRole('button', { name: /模拟参与者发消息/ }).click()
+      await page.keyboard.press('Escape')
+      await openChatFromMenu(page)
+      const messageTexts = await page.locator('p.text-sm.leading-5').allTextContents()
+      targetMessage = messageTexts.find((t) => matchingMessages.includes(t))
+      if (!targetMessage) await page.keyboard.press('Escape')
+    }
+    expect(targetMessage).toBeTruthy()
+
+    // 点击该匹配消息对应的「代为点菜」按钮（消息文本与其「代为点菜」按钮同属一个气泡容器）
+    const targetBubble = page.getByText(targetMessage!, { exact: true }).first().locator('xpath=..')
+    await targetBubble.getByRole('button', { name: /代为点菜/ }).click()
+    await expect(page.getByText(/已代点/).first()).toBeVisible()
+
+    // 关闭聊天面板；桌面端右侧栏购物车面板始终可见（hidden lg:block），直接校验购物车内容
     await page.keyboard.press('Escape')
-    // 切换到移动端视口，使底部浮动「查看购物车」按钮可见（lg:hidden）
-    await page.setViewportSize({ width: 390, height: 844 })
-    // 点击浮动购物车按钮打开购物车面板
-    await page.getByRole('button', { name: /查看购物车|View Cart/ }).click()
-    // 购物车中应包含匹配到的真实菜品（而非消息原文）
-    // 预设消息模板与菜品名称的对应关系：
-    //   "帮我点一份麻辣牛肉" → 琥珀嫩牛肉
-    //   "想要一份鲜虾滑" → 鲜虾滑
-    //   "加一份手工宽粉" → 手工宽粉
-    //   "帮我点一份脆嫩毛肚" → 脆嫩毛肚
-    //   "想喝柠檬青桔饮" → 柠檬青桔饮
-    const knownDishes = [
-      '琥珀嫩牛肉',
-      '鲜虾滑',
-      '手工宽粉',
-      '脆嫩毛肚',
-      '柠檬青桔饮',
-    ]
-    const cartDialog = page.getByRole('dialog')
-    const foundDish = knownDishes.find((dish) => {
-      // Check if the dish name appears as text in the dialog
-      return cartDialog.locator(`text=${dish}`).count() > 0
-    })
-    expect(foundDish).toBeTruthy()
+    const expectedDish = messageToDish[targetMessage!]
+    // 购物车中出现匹配到的真实菜品名称（而非消息原文），证明菜品已按真实身份加入
+    await expect(page.locator('aside').getByText(expectedDish, { exact: true })).toBeVisible()
   })
 
   test('REQ-005: 已处理的消息不可重复操作', async ({ page }) => {

@@ -242,6 +242,7 @@ const resources = {
         handled: '已代点',
         joined: '{{name}} 已加入会话',
         order_added: '已将「{{dish}}」加入购物车',
+        no_match: '未找到匹配菜品',
         no_session_desc: '创建会话后，参与者可加入并通过聊天请求代为点菜',
       },
       message: {
@@ -504,6 +505,7 @@ const resources = {
         handled: 'Ordered',
         joined: '{{name}} joined the session',
         order_added: 'Added "{{dish}}" to cart',
+        no_match: 'No matching dish found',
         no_session_desc: 'After creating a session, participants can join and request dishes via chat.',
       },
       message: {

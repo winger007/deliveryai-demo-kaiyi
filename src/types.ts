@@ -40,6 +40,32 @@ export interface ServiceRequest {
   status: 'waiting' | 'responded'
 }
 
+export interface ChatParticipant {
+  id: string
+  name: string
+  isHost: boolean
+}
+
+export interface ChatMessage {
+  id: string
+  senderId: string
+  senderName: string
+  content: string
+  timestamp: string
+  type: 'text' | 'system'
+  handled?: boolean
+}
+
+export interface ChatSession {
+  id: string
+  name: string
+  hostId: string
+  hostName: string
+  participants: ChatParticipant[]
+  messages: ChatMessage[]
+  active: boolean
+}
+
 export interface AppState {
   view: ViewName
   table: string | null
@@ -51,6 +77,7 @@ export interface AppState {
   services: ServiceRequest[]
   paid: boolean
   lastMessage: string
+  chatSession: ChatSession | null
 }
 
 export type AppAction =
@@ -67,3 +94,8 @@ export type AppAction =
   | { type: 'PAY' }
   | { type: 'RESET' }
   | { type: 'SET_MESSAGE'; message: string }
+  | { type: 'CREATE_CHAT_SESSION'; sessionName: string; hostName: string }
+  | { type: 'JOIN_CHAT_SESSION'; participant: { id: string; name: string } }
+  | { type: 'SEND_CHAT_MESSAGE'; senderId: string; senderName: string; content: string }
+  | { type: 'HANDLE_CHAT_REQUEST'; messageId: string }
+  | { type: 'CLOSE_CHAT_SESSION' }

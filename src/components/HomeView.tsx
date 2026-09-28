@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronRight, MapPin, QrCode, Sparkles, Users } from 'lucide-react'
+import { Check, ChevronRight, MapPin, MessageSquareText, QrCode, Sparkles, Users } from 'lucide-react'
 import hotpot from '@/assets/hotpot.jpg'
 import { Button } from '@/components/ui/button'
 
@@ -10,9 +10,12 @@ const tableOptions = [
   { code: 'D03', areaKey: 'bind.area.window', seats: 6 },
 ]
 
-interface HomeViewProps { onBind: (table: string) => void }
+interface HomeViewProps {
+  onBind: (table: string) => void
+  onOpenChat: () => void
+}
 
-export function HomeView({ onBind }: HomeViewProps) {
+export function HomeView({ onBind, onOpenChat }: HomeViewProps) {
   const { t } = useTranslation()
   return (
     <main className="relative min-h-screen overflow-hidden bg-rice-100 paper-noise">
@@ -35,30 +38,48 @@ export function HomeView({ onBind }: HomeViewProps) {
           </div>
         </section>
 
-        <section className="animate-rise rounded-3xl border border-white/80 bg-white/90 p-4 shadow-float backdrop-blur sm:p-6">
-          <div className="relative mb-6 h-48 overflow-hidden rounded-2xl sm:h-56">
-            <img src={hotpot} alt={t('bind.img_alt')} className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/70 to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between text-white">
-              <div><p className="text-xs opacity-80">{t('common.simulated_store')}</p><h2 className="text-xl font-bold">{t('common.store_name')}</h2></div>
-              <span className="rounded-full bg-white/20 px-3 py-1 text-xs backdrop-blur">{t('common.open')}</span>
+        <section className="animate-rise space-y-4">
+          {/* 桌台选择卡片 */}
+          <div className="rounded-3xl border border-white/80 bg-white/90 p-4 shadow-float backdrop-blur sm:p-6">
+            <div className="relative mb-6 h-48 overflow-hidden rounded-2xl sm:h-56">
+              <img src={hotpot} alt={t('bind.img_alt')} className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/70 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between text-white">
+                <div><p className="text-xs opacity-80">{t('common.simulated_store')}</p><h2 className="text-xl font-bold">{t('common.store_name')}</h2></div>
+                <span className="rounded-full bg-white/20 px-3 py-1 text-xs backdrop-blur">{t('common.open')}</span>
+              </div>
             </div>
+            <div className="mb-4 flex items-center gap-3 rounded-2xl bg-rice-100 p-4">
+              <span className="rounded-xl bg-white p-3 text-chili-500 shadow-sm"><QrCode /></span>
+              <div className="min-w-0 flex-1"><p className="font-bold text-charcoal-900">{t('bind.qr_title')}</p><p className="text-sm text-charcoal-500">{t('bind.qr_desc')}</p></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {tableOptions.map(({ code, areaKey, seats }, index) => (
+                <button key={code} onClick={() => onBind(code)} className="group rounded-2xl border border-charcoal-900/10 bg-white p-4 text-left transition hover:-translate-y-1 hover:border-chili-500 hover:shadow-card">
+                  <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-rice-100 text-sm font-extrabold text-chili-500">{index + 1}</span>
+                  <p className="font-bold text-charcoal-900">{code} · {t(areaKey)}</p>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-charcoal-500"><Users size={13} /> {t('bind.seats', { count: seats })}</p>
+                  <ChevronRight size={17} className="ml-auto mt-2 text-charcoal-500 transition group-hover:translate-x-1 group-hover:text-chili-500" />
+                </button>
+              ))}
+            </div>
+            <Button onClick={() => onBind('A08')} className="mt-4 w-full"><MapPin size={17} />{t('bind.quick_enter')}</Button>
           </div>
-          <div className="mb-4 flex items-center gap-3 rounded-2xl bg-rice-100 p-4">
-            <span className="rounded-xl bg-white p-3 text-chili-500 shadow-sm"><QrCode /></span>
-            <div className="min-w-0 flex-1"><p className="font-bold text-charcoal-900">{t('bind.qr_title')}</p><p className="text-sm text-charcoal-500">{t('bind.qr_desc')}</p></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {tableOptions.map(({ code, areaKey, seats }, index) => (
-              <button key={code} onClick={() => onBind(code)} className="group rounded-2xl border border-charcoal-900/10 bg-white p-4 text-left transition hover:-translate-y-1 hover:border-chili-500 hover:shadow-card">
-                <span className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-rice-100 text-sm font-extrabold text-chili-500">{index + 1}</span>
-                <p className="font-bold text-charcoal-900">{code} · {t(areaKey)}</p>
-                <p className="mt-1 flex items-center gap-1 text-xs text-charcoal-500"><Users size={13} /> {t('bind.seats', { count: seats })}</p>
-                <ChevronRight size={17} className="ml-auto mt-2 text-charcoal-500 transition group-hover:translate-x-1 group-hover:text-chili-500" />
-              </button>
-            ))}
-          </div>
-          <Button onClick={() => onBind('A08')} className="mt-4 w-full"><MapPin size={17} />{t('bind.quick_enter')}</Button>
+
+          {/* 多人聊天点菜入口卡片 */}
+          <button
+            onClick={onOpenChat}
+            className="group flex w-full items-center gap-4 rounded-3xl border border-chili-500/15 bg-white/90 p-5 text-left shadow-float backdrop-blur transition hover:-translate-y-0.5 hover:border-chili-500/40 hover:shadow-card"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-chili-50 text-chili-500 transition group-hover:bg-chili-100">
+              <MessageSquareText size={24} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-charcoal-900">{t('chat.entry_title')}</p>
+              <p className="mt-0.5 text-sm leading-5 text-charcoal-500">{t('chat.entry_desc')}</p>
+            </div>
+            <ChevronRight size={20} className="shrink-0 text-charcoal-500 transition group-hover:translate-x-1 group-hover:text-chili-500" />
+          </button>
         </section>
       </div>
     </main>

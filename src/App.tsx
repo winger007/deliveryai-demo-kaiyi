@@ -146,10 +146,12 @@ export default function App() {
     <GroupChatPanel
       open={chatOpen}
       session={state.chatSession}
+      cart={state.cart}
       onOpenChange={setChatOpen}
       onCreateSession={handleCreateSession}
       onEnterOrdering={handleEnterOrdering}
-      onHandleRequest={(messageId) => dispatch({ type: 'HANDLE_CHAT_REQUEST', messageId })}
+      onCartQuantity={(uid, delta) => dispatch({ type: 'CHANGE_QTY', uid, delta })}
+      onSubmitCart={submitOrder}
       onSendMessage={handleSendMessage}
     />
   )

@@ -1,27 +1,32 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ChefHat, MessageSquare, Send, ShoppingBasket, UserPlus, Users } from 'lucide-react'
+import { MessageSquare, Send, ShoppingBasket, UserPlus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CartPanel } from '@/components/CartPanel'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import type { ChatSession } from '@/types'
+import type { CartItem, ChatSession } from '@/types'
 
 interface GroupChatPanelProps {
   open: boolean
   session: ChatSession | null
+  cart: CartItem[]
   onOpenChange: (open: boolean) => void
   onCreateSession: (sessionName: string) => void
   onEnterOrdering: () => void
-  onHandleRequest: (messageId: string) => void
+  onCartQuantity: (uid: string, delta: number) => void
+  onSubmitCart: () => void
   onSendMessage: (content: string) => void
 }
 
 export function GroupChatPanel({
   open,
   session,
+  cart,
   onOpenChange,
   onCreateSession,
   onEnterOrdering,
-  onHandleRequest,
+  onCartQuantity,
+  onSubmitCart,
   onSendMessage,
 }: GroupChatPanelProps) {
   const { t } = useTranslation()
@@ -63,7 +68,7 @@ export function GroupChatPanel({
           </div>
         ) : (
           /* 会话进行中 */
-          <div className="mt-4 flex flex-col gap-4" style={{ maxHeight: '60vh' }}>
+          <div className="mt-4 flex flex-col gap-4" style={{ maxHeight: '70vh' }}>
             {/* 会话信息 + 参与者列表 */}
             <div className="rounded-2xl bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
@@ -121,33 +126,13 @@ export function GroupChatPanel({
                             msg.senderId === session.hostId
                               ? 'rounded-br-sm bg-chili-500 text-white'
                               : 'rounded-bl-sm bg-white text-charcoal-900'
-                          } ${msg.handled ? 'opacity-50' : ''}`}
+                          }`}
                         >
                           <div className="mb-1 flex items-center gap-2 text-xs opacity-70">
                             <span className="font-bold">{msg.senderName}</span>
                             <span>{msg.timestamp}</span>
                           </div>
                           <p className="text-sm leading-5">{msg.content}</p>
-                          {msg.senderId !== session.hostId && (
-                            <div className="mt-2">
-                              {msg.handled ? (
-                                <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-600">
-                                  <Check size={13} />
-                                  {t('chat.handled')}
-                                </span>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => onHandleRequest(msg.id)}
-                                  className="h-8"
-                                >
-                                  <ChefHat size={14} />
-                                  {t('chat.order_for')}
-                                </Button>
-                              )}
-                            </div>
-                          )}
                         </div>
                       </div>
                     ),
@@ -155,6 +140,9 @@ export function GroupChatPanel({
                 </div>
               )}
             </div>
+
+            {/* 嵌入式购物车区域（复用 CartPanel compact 模式） */}
+            <CartPanel compact items={cart} onQuantity={onCartQuantity} onSubmit={onSubmitCart} />
 
             {/* 消息输入区域（发起者也可发消息） */}
             <div className="flex items-center gap-2">

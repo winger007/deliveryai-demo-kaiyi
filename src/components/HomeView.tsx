@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronRight, MapPin, MessageSquareText, QrCode, Sparkles, Users } from 'lucide-react'
+import { Check, ChevronRight, MapPin, QrCode, Sparkles, Users } from 'lucide-react'
 import hotpot from '@/assets/hotpot.jpg'
 import { Button } from '@/components/ui/button'
 
@@ -12,10 +12,9 @@ const tableOptions = [
 
 interface HomeViewProps {
   onBind: (table: string) => void
-  onOpenChat: () => void
 }
 
-export function HomeView({ onBind, onOpenChat }: HomeViewProps) {
+export function HomeView({ onBind }: HomeViewProps) {
   const { t } = useTranslation()
   return (
     <main className="relative min-h-screen overflow-hidden bg-rice-100 paper-noise">
@@ -66,20 +65,6 @@ export function HomeView({ onBind, onOpenChat }: HomeViewProps) {
             <Button onClick={() => onBind('A08')} className="mt-4 w-full"><MapPin size={17} />{t('bind.quick_enter')}</Button>
           </div>
 
-          {/* 多人聊天点菜入口卡片 */}
-          <button
-            onClick={onOpenChat}
-            className="group flex w-full items-center gap-4 rounded-3xl border border-chili-500/15 bg-white/90 p-5 text-left shadow-float backdrop-blur transition hover:-translate-y-0.5 hover:border-chili-500/40 hover:shadow-card"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-chili-50 text-chili-500 transition group-hover:bg-chili-100">
-              <MessageSquareText size={24} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold text-charcoal-900">{t('chat.entry_title')}</p>
-              <p className="mt-0.5 text-sm leading-5 text-charcoal-500">{t('chat.entry_desc')}</p>
-            </div>
-            <ChevronRight size={20} className="shrink-0 text-charcoal-500 transition group-hover:translate-x-1 group-hover:text-chili-500" />
-          </button>
         </section>
       </div>
     </main>

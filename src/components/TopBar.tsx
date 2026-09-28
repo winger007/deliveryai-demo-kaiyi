@@ -1,4 +1,4 @@
-import { Accessibility, Crown, Languages, LayoutDashboard, MapPin, MessageSquareText, PhoneCall, ReceiptText, Search, UserRound } from 'lucide-react'
+import { Accessibility, Crown, Languages, LayoutDashboard, MapPin, PhoneCall, ReceiptText, Search, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
@@ -16,10 +16,9 @@ interface TopBarProps {
   onView: (view: ViewName) => void
   onService: () => void
   onConsole: () => void
-  onChat: () => void
 }
 
-export function TopBar({ table, view, serviceCount, language, elderly, onToggleLanguage, onToggleElderly, onView, onService, onConsole, onChat }: TopBarProps) {
+export function TopBar({ table, view, serviceCount, language, elderly, onToggleLanguage, onToggleElderly, onView, onService, onConsole }: TopBarProps) {
   const { t } = useTranslation()
   const areaKey = tableAreas[table]
   const tableLabel = areaKey ? `${table} · ${t(areaKey)}` : table
@@ -40,9 +39,6 @@ export function TopBar({ table, view, serviceCount, language, elderly, onToggleL
             <Button variant={view === 'menu' ? 'secondary' : 'ghost'} size="sm" onClick={() => onView('menu')}><Search size={16} />{t('common.nav_menu')}</Button>
             <Button variant={view === 'order' ? 'secondary' : 'ghost'} size="sm" onClick={() => onView('order')}><ReceiptText size={16} />{t('common.nav_order')}</Button>
           </nav>
-          <Button variant="outline" size="icon" onClick={onChat} aria-label={t('common.aria_chat')}>
-            <MessageSquareText size={18} />
-          </Button>
           <Button variant="outline" size="icon" onClick={onService} className="relative" aria-label={t('common.aria_service')}>
             <PhoneCall size={18} />{serviceCount > 0 && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-chili-500" />}
           </Button>

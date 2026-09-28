@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { ClipboardList, ConciergeBell, LayoutDashboard, Menu as MenuIcon, ShoppingBasket } from 'lucide-react'
+import { ChevronRight, ClipboardList, ConciergeBell, LayoutDashboard, Menu as MenuIcon, MessageSquareText, ShoppingBasket } from 'lucide-react'
 import { CheckoutView } from '@/components/CheckoutView'
 import { DemoConsole } from '@/components/DemoConsole'
 import { GroupChatPanel } from '@/components/GroupChatPanel'
@@ -156,10 +156,7 @@ export default function App() {
 
   if (state.view === 'home' || !state.table) {
     return (
-      <>
-        <HomeView onBind={(table) => dispatch({ type: 'BIND_TABLE', table })} onOpenChat={() => setChatOpen(true)} />
-        {chatPanel}
-      </>
+      <HomeView onBind={(table) => dispatch({ type: 'BIND_TABLE', table })} />
     )
   }
 
@@ -180,7 +177,6 @@ export default function App() {
         onView={changeView}
         onService={() => setServiceOpen(true)}
         onConsole={() => setConsoleOpen(true)}
-        onChat={() => setChatOpen(true)}
       />
 
       {state.view === 'menu' && (
@@ -195,10 +191,26 @@ export default function App() {
                 <p className="font-bold">{t('common.collab_title')}</p>
                 <p className="mt-1 leading-6 text-charcoal-500">{t('common.collab_desc')}</p>
               </div>
+              {/* 多人聊天点菜入口 */}
+              <button
+                onClick={() => setChatOpen(true)}
+                className="group mt-4 flex w-full items-center gap-4 rounded-2xl border border-chili-500/15 bg-white/90 p-4 text-left shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-chili-500/40 hover:shadow-card"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-chili-50 text-chili-500 transition group-hover:bg-chili-100">
+                  <MessageSquareText size={20} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-charcoal-900">{t('chat.entry_title')}</p>
+                  <p className="mt-0.5 text-xs leading-4 text-charcoal-500">{t('chat.entry_desc')}</p>
+                </div>
+                <ChevronRight size={18} className="shrink-0 text-charcoal-500 transition group-hover:translate-x-1 group-hover:text-chili-500" />
+              </button>
             </div>
           </aside>
         </main>
       )}
+
+      {state.view === 'menu' && chatPanel}
 
       {state.view === 'order' && (
         <OrderView
@@ -230,15 +242,18 @@ export default function App() {
         onSimulateJoin={handleSimulateJoin}
         onSimulateMessage={handleSimulateMessage}
       />
-      {chatPanel}
-
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>
         <DialogContent title={t('cart.dialog_title')}>
           <div className="mt-5"><CartPanel compact items={state.cart} onQuantity={(uid, delta) => dispatch({ type: 'CHANGE_QTY', uid, delta })} onSubmit={submitOrder} /></div>
         </DialogContent>
       </Dialog>
 
-      <div className="fixed bottom-20 left-1/2 z-30 -translate-x-1/2 lg:hidden">
+      <div className="fixed bottom-20 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 lg:hidden">
+        {state.view === 'menu' && (
+          <Button onClick={() => setChatOpen(true)} variant="outline" size="icon" className="h-12 w-12 rounded-full bg-white shadow-float" aria-label={t('common.aria_chat')}>
+            <MessageSquareText size={20} />
+          </Button>
+        )}
         {state.view === 'menu' && state.cart.length > 0 && (
           <Button onClick={() => setCartOpen(true)} className="h-12 rounded-full px-5 shadow-float">
             <span className="relative"><ShoppingBasket size={19} /><span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-xs text-charcoal-900">{state.cart.length}</span></span>

@@ -1,5 +1,6 @@
 import i18next from 'i18next'
 import { uid } from '@/lib/utils'
+import { products } from '@/data/menu'
 import type { AppAction, AppState } from '@/types'
 
 export const initialState: AppState = {
@@ -158,25 +159,45 @@ export function orderReducer(state: AppState, action: AppAction): AppState {
       if (!state.chatSession) return state
       const message = state.chatSession.messages.find((m) => m.id === action.messageId)
       if (!message || message.handled) return state
-      // 将消息内容作为菜品名称加入购物车
+      // 用消息文本匹配菜单中的真实菜品（不区分大小写的子串匹配，取第一个）
+      const msgLower = message.content.toLowerCase()
+      const matchedProduct = products.find((p) => i18next.t(p.name).toLowerCase().includes(msgLower) || msgLower.includes(i18next.t(p.name).toLowerCase()))
+      // 无论匹配成功与否，消息都标记为已处理，避免重复操作
+      const updatedMessages = state.chatSession.messages.map((m) => m.id === action.messageId ? { ...m, handled: true } : m)
+      if (!matchedProduct) {
+        return {
+          ...state,
+          chatSession: { ...state.chatSession, messages: updatedMessages },
+          lastMessage: i18next.t('chat.no_match'),
+        }
+      }
+      // 以默认规格加入购物车（与 MenuView openSpec / addSelected 逻辑一致）
+      const portion = matchedProduct.options?.portion?.[1] || matchedProduct.options?.portion?.[0] || ''
+      const flavor = matchedProduct.options?.flavor?.[0] || ''
+      const spicy = matchedProduct.options?.spicy?.[0] || ''
+      const portionFactor = portion === 'menu.option.half' ? 0.58 : 1
+      const specParts = [portion, flavor, spicy].filter(Boolean).map((key) => i18next.t(key))
+      const spec = specParts.join(' · ') || i18next.t('menu.standard')
       const cartItem = {
         uid: uid(),
-        productId: `chat-${message.id}`,
-        name: message.content,
-        price: 0,
+        productId: matchedProduct.id,
+        name: i18next.t(matchedProduct.name),
+        price: Math.round(matchedProduct.price * portionFactor),
         quantity: 1,
-        image: '',
-        spec: '',
+        image: matchedProduct.image,
+        spec,
         orderedBy: message.senderName,
       }
+      // 复用 ADD_CART 合并逻辑：同 productId + spec + orderedBy 数量 +1，否则新增
+      const same = state.cart.find((item) => item.productId === cartItem.productId && item.spec === cartItem.spec && item.orderedBy === cartItem.orderedBy)
+      const cart = same
+        ? state.cart.map((item) => item.uid === same.uid ? { ...item, quantity: item.quantity + 1 } : item)
+        : [...state.cart, cartItem]
       return {
         ...state,
-        cart: [...state.cart, cartItem],
-        chatSession: {
-          ...state.chatSession,
-          messages: state.chatSession.messages.map((m) => m.id === action.messageId ? { ...m, handled: true } : m),
-        },
-        lastMessage: i18next.t('chat.order_added', { dish: message.content }),
+        cart,
+        chatSession: { ...state.chatSession, messages: updatedMessages },
+        lastMessage: i18next.t('chat.order_added', { dish: i18next.t(matchedProduct.name) }),
       }
     }
     case 'CLOSE_CHAT_SESSION':
